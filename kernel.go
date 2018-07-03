@@ -146,14 +146,16 @@ func (b *Board) State() (bool, int) {
 	}
 	return hasEmpty, winner
 }
-func (this *MetaBoard) Flip() {
-
+func (this *MetaBoard) Flip(flag int) {
+	for i := 0; i < leng(this.board); i++ {
+		this.board[i] /= flag
+	}
 }
-func (this *MetaBoard) Apply(policy int) {
-
+func (this *MetaBoard) Apply(policy int, flag int) {
+	this.board[policy] = flag
 }
 func (this *MetaBoard) Cancel(policy int) {
-
+	this.board[policy] = 0
 }
 func (this *MetaBoard) Localize(globalPolicy int) int {
 
