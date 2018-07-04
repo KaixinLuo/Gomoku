@@ -1,7 +1,6 @@
-package main
+package gmk
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -78,7 +77,21 @@ func (board *Board) NextMeta() (bool, MetaBoard) {
 	}
 	return canProceed, m
 }
-
+func (this *Board) Apply(policy int, flag int) {
+	this.board[policy] = flag
+}
+func (this *Board) Cancel(policy int) {
+	this.board[policy] = 0
+}
+func (this *Board) isPlaybale() (bool, int) {
+	canContinue := true
+	winner := 0
+	for i := 0; i < this.NumOfMeta() && canContinue; i++ {
+		_, m := this.NextMeta()
+		canContinue, winner = m.State()
+	}
+	return canContinue, winner
+}
 func (b *Board) ToString() string {
 	result := ""
 	for i := 0; i < b.size; i++ {
@@ -217,7 +230,7 @@ func (this *MetaBoard) WorstLocalPolicyAndUtil(flag int, decayRate float64) (int
 		var u float64
 		for _, policy := range policies {
 			this.Apply(policy, flag)
-			p, u = this.WorstLocalPolicyAndUtil(-flag, decayRate)
+			p, u = this.BestLocalPolicyAndUtil(-flag, decayRate)
 			this.Cancel(policy)
 		}
 		if minUtil > u {
@@ -247,15 +260,4 @@ func (b *MetaBoard) ToString() string {
 	}
 	//result += "\n"
 	return result
-}
-
-//MinMax
-
-func main() {
-	b := BoardInit(6, 5)
-	fmt.Println(b.ToString())
-	for i := 0; i < b.NumOfMeta(); i++ {
-		_, m := b.NextMeta()
-		fmt.Println(m.ToString())
-	}
 }
