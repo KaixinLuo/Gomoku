@@ -4,6 +4,14 @@ import (
 	"math"
 )
 
+const (
+	FIRSTHAND = 1
+	LASTHAND  = -1
+	TIE       = 0
+	SELF      = 1
+	ENEMY     = -1
+)
+
 /********************************board structure**********************************/
 // the game Board
 type Board struct {
@@ -29,6 +37,11 @@ func IndexDimIncrease(position int, size int) (int, int) {
 }
 func IndexDimReduction(dim1 int, dim2 int, metric int) int {
 	return dim1*metric + dim2
+}
+func IsPolicyLigit(game Board, policy int) bool {
+	result := policy < len(game.board)
+	result = result && game.IsPolicyAvailable(policy)
+	return result
 }
 
 /********************************board function**********************************/
@@ -83,7 +96,7 @@ func (this *Board) Apply(policy int, flag int) {
 func (this *Board) Cancel(policy int) {
 	this.board[policy] = 0
 }
-func (this *Board) isPlaybale() (bool, int) {
+func (this *Board) IsPlaybale() (bool, int) {
 	canContinue := true
 	winner := 0
 	for i := 0; i < this.NumOfMeta() && canContinue; i++ {
@@ -91,6 +104,19 @@ func (this *Board) isPlaybale() (bool, int) {
 		canContinue, winner = m.State()
 	}
 	return canContinue, winner
+}
+func (this *Board) IsEmpty() bool {
+	result := true
+	for i := 0; i < len(this.board); i++ {
+		result = (this.board[i] == 0)
+	}
+	return result
+}
+func (this *Board) Globalize(localPolicy int) int {
+	vertical, horizontal := IndexDimIncrease(localPolicy, this.metaSize)
+	metaVertical, metaHorizontal := IndexDimIncrease(this.metaPosition, this.size)
+
+	return (vertical+metaVertical)*this.size + (horizontal + metaHorizontal)
 }
 func (b *Board) ToString() string {
 	result := ""
@@ -109,6 +135,9 @@ func (b *Board) ToString() string {
 	result += "\n"
 	return result
 }
+func (this *Board) IsPolicyAvailable(policy int) bool {
+	return this.board[policy] == 0
+}
 
 /********************************meta board function**********************************/
 func (b *MetaBoard) EmptyPositions() []int {
@@ -116,7 +145,7 @@ func (b *MetaBoard) EmptyPositions() []int {
 	nextPosition := 0
 	for i := 0; i < len(b.board); i++ {
 		if b.board[i] == 0 {
-			result[nextPosition] = i
+			result = append(result, i)
 			nextPosition++
 		}
 	}
@@ -161,9 +190,12 @@ func (b *MetaBoard) State() (bool, int) {
 	return hasEmpty, winner
 }
 func (this *MetaBoard) Flip(flag int) {
-	for i := 0; i < len(this.board); i++ {
-		this.board[i] /= flag
+	if flag == -1 {
+		for i := 0; i < len(this.board); i++ {
+			this.board[i] /= flag
+		}
 	}
+
 }
 func (this *MetaBoard) Apply(policy int, flag int) {
 	this.board[policy] = flag
@@ -178,12 +210,7 @@ func (this *MetaBoard) Localize(globalPolicy int) int {
 	return (vertical-metaVertical)*this.size + (horizontal - metaHorizontal)
 
 }
-func (this *MetaBoard) Globalize(localPolicy int) int {
-	vertical, horizontal := IndexDimIncrease(localPolicy, this.super.size)
-	metaVertical, metaHorizontal := IndexDimIncrease(this.super.metaPosition, this.super.size)
 
-	return (vertical+metaVertical)*this.size + (horizontal + metaHorizontal)
-}
 func (this *MetaBoard) IsPolicyAvailable(policy int) bool {
 	return this.board[policy] == 0
 }
