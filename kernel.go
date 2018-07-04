@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 )
 
 /********************************board structure**********************************/
@@ -108,7 +109,7 @@ func (b *MetaBoard) EmptyPositions() []int {
 	}
 	return result
 }
-func (b *Board) State() (bool, int) {
+func (b *MetaBoard) State() (bool, int) {
 	hasEmpty := false
 	winner := 0
 	//check empty
@@ -147,7 +148,7 @@ func (b *Board) State() (bool, int) {
 	return hasEmpty, winner
 }
 func (this *MetaBoard) Flip(flag int) {
-	for i := 0; i < leng(this.board); i++ {
+	for i := 0; i < len(this.board); i++ {
 		this.board[i] /= flag
 	}
 }
@@ -158,12 +159,76 @@ func (this *MetaBoard) Cancel(policy int) {
 	this.board[policy] = 0
 }
 func (this *MetaBoard) Localize(globalPolicy int) int {
+	vertical, horizontal := IndexDimIncrease(globalPolicy, this.super.size)
+	metaVertical, metaHorizontal := IndexDimIncrease(this.super.metaPosition, this.super.size)
+
+	return (vertical-metaVertical)*this.size + (horizontal - metaHorizontal)
 
 }
 func (this *MetaBoard) Globalize(localPolicy int) int {
+	vertical, horizontal := IndexDimIncrease(localPolicy, this.super.size)
+	metaVertical, metaHorizontal := IndexDimIncrease(this.super.metaPosition, this.super.size)
+
+	return (vertical+metaVertical)*this.size + (horizontal + metaHorizontal)
+}
+func (this *MetaBoard) IsPolicyAvailable(policy int) bool {
+	return this.board[policy] == 0
+}
+
+//has to flip before call this method
+func (this *MetaBoard) BestLocalPolicyAndUtil(flag int, decayRate float64) (int, float64) {
+
+	maxUtil := math.Inf(-1)
+	var bestPolicy int
+	var util float64
+	hasEmpty, winner := this.State()
+
+	if hasEmpty && winner == 0 {
+		policies := this.EmptyPositions()
+		var p int
+		var u float64
+		for _, policy := range policies {
+			this.Apply(policy, flag)
+			p, u = this.WorstLocalPolicyAndUtil(-flag, decayRate)
+			this.Cancel(policy)
+		}
+		if maxUtil < u {
+			bestPolicy = p
+			maxUtil = u
+			util = decayRate * u
+		}
+	} else {
+		util = float64(winner * 10)
+	}
+
+	return bestPolicy, util
 
 }
-func (this *MetaBoard) IsPolicyAvailable(policy int) {
+func (this *MetaBoard) WorstLocalPolicyAndUtil(flag int, decayRate float64) (int, float64) {
+
+	minUtil := math.Inf(1)
+	var worstPolicy int
+	var util float64
+	hasEmpty, winner := this.State()
+
+	if hasEmpty && winner == 0 {
+		policies := this.EmptyPositions()
+		var p int
+		var u float64
+		for _, policy := range policies {
+			this.Apply(policy, flag)
+			p, u = this.WorstLocalPolicyAndUtil(-flag, decayRate)
+			this.Cancel(policy)
+		}
+		if minUtil > u {
+			worstPolicy = p
+			minUtil = u
+			util = decayRate * u
+		}
+	} else {
+		util = float64(winner * 10)
+	}
+	return worstPolicy, util
 
 }
 func (b *MetaBoard) ToString() string {
@@ -184,8 +249,8 @@ func (b *MetaBoard) ToString() string {
 	return result
 }
 
-//policy generalization
 //MinMax
+
 func main() {
 	b := BoardInit(6, 5)
 	fmt.Println(b.ToString())
